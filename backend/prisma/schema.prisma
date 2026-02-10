@@ -1,0 +1,161 @@
+// Ton Ad Marketplace - Prisma Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  Owner
+  Advertiser
+}
+
+enum DealStatus {
+  Pending      // Ожидает внесения средств
+  Funded       // Средства внесены, ожидает черновика
+  Draft_Review // Черновик на согласовании
+  Scheduled    // Запланировано к публикации
+  Published    // Опубликовано, ожидает проверки
+  Completed    // Сделка завершена, средства выплачены
+  Refunded     // Возврат средств рекламодателю
+}
+
+enum CampaignStatus {
+  Draft
+  Submitted
+  Accepted
+  Rejected
+  InProgress
+  Completed
+}
+
+enum ChannelAdminRole {
+  Owner      // Владелец канала
+  PR_Manager // PR-менеджер, может управлять сделками и черновиками
+}
+
+model User {
+  id            String   @id @default(cuid())
+  telegramId    BigInt   @unique
+  username      String?
+  firstName     String?
+  lastName      String?
+  role          UserRole @default(Advertiser)
+  balanceNano   BigInt   @default(0) // TON в nanotons
+  walletAddress String?  @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  channelsOwned   Channel[]       @relation("ChannelOwner")
+  channelAdmins   ChannelAdmin[]  @relation("ChannelAdminUser")
+  campaigns       Campaign[]      @relation("AdvertiserCampaigns")
+  dealsAsAdvertiser Deal[]        @relation("DealAdvertiser")
+  dealsAsOwner    Deal[]          @relation("DealOwner")
+}
+
+model Channel {
+  id              String   @id @default(cuid())
+  ownerId         String
+  owner           User     @relation("ChannelOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  telegramId      BigInt   @unique // ID канала в Telegram (отрицательный)
+  username        String?  @unique
+  title           String?
+  description     String?
+  subscribers     Int      @default(0)
+  views           Int      @default(0)
+  reach           Int      @default(0)
+  language        String?
+  languageCharts  Json?    // Распределение языков [{lang, percentage}]
+  premiumStats    Json?    // Premium: подписчики, доля и т.д.
+  pricePerPostNano BigInt  @default(0) // Цена за пост в nanotons
+  isVerified      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  admins    ChannelAdmin[]
+  campaigns Campaign[]
+  deals     Deal[]
+}
+
+model ChannelAdmin {
+  id        String          @id @default(cuid())
+  channelId String
+  channel   Channel         @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User            @relation("ChannelAdminUser", fields: [userId], references: [id], onDelete: Cascade)
+  role      ChannelAdminRole @default(PR_Manager)
+  createdAt DateTime        @default(now())
+
+  @@unique([channelId, userId])
+  @@index([channelId])
+  @@index([userId])
+}
+
+model Campaign {
+  id          String         @id @default(cuid())
+  advertiserId String
+  advertiser   User           @relation("AdvertiserCampaigns", fields: [advertiserId], references: [id], onDelete: Cascade)
+  channelId   String
+  channel     Channel        @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  status      CampaignStatus @default(Draft)
+
+  // Бриф от рекламодателя
+  briefTitle       String?
+  briefDescription String?
+  briefTargetAudience String?
+  briefCallToAction  String?
+  briefLinks        String[] @default([])
+  briefDeadline     DateTime?
+  briefBudgetNano   BigInt?
+  briefNotes        String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deals Deal[]
+}
+
+model Deal {
+  id              String     @id @default(cuid())
+  campaignId      String
+  campaign        Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  channelId       String
+  channel         Channel    @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  advertiserId    String
+  advertiser      User       @relation("DealAdvertiser", fields: [advertiserId], references: [id], onDelete: Cascade)
+  ownerId         String
+  owner           User       @relation("DealOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  status          DealStatus @default(Pending)
+  amountNano      BigInt     // Сумма сделки в nanotons
+  escrowAddress   String?    @unique // Адрес escrow кошелька/контракта
+  txHash          String?    // Хэш транзакции внесения средств
+  payoutTxHash    String?    // Хэш транзакции выплаты
+  refundTxHash    String?    // Хэш транзакции возврата
+
+  // Черновик поста
+  draftText       String?
+  draftMediaUrls  String[]   @default([])
+  draftRejected   Boolean    @default(false)
+  draftRejectReason String?
+  draftApprovedAt DateTime?
+  draftContentHash String?   // SHA-256 черновика для проверки целостности поста
+
+  // Публикация
+  scheduledAt     DateTime?
+  publishedAt     DateTime?
+  publishedPostUrl String?
+  publishedPostMessageId BigInt?
+
+  // Проверка поста (в течение X часов)
+  verificationDeadline DateTime?
+  verifiedAt          DateTime?
+  verificationFailed  Boolean   @default(false)
+  verificationNotes   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

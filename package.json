@@ -1,0 +1,27 @@
+{
+  "name": "ton-ad-marketplace",
+  "version": "1.0.0",
+  "description": "MVP advertising marketplace for Telegram channels with TON escrow",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend",
+    "bot"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:bot\"",
+    "dev:backend": "npm run dev -w backend",
+    "dev:frontend": "npm run dev -w frontend",
+    "dev:bot": "npm run dev -w bot",
+    "build": "npm run build -w backend && npm run build -w frontend && npm run build -w bot",
+    "db:generate": "npm run db:generate -w backend",
+    "db:migrate": "npm run db:migrate -w backend",
+    "db:push": "npm run db:push -w backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
