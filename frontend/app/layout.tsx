@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import { Providers } from './providers';
 import './globals.css';
 
@@ -15,13 +16,7 @@ export default function RootLayout({
   return (
     <html lang="ru">
       <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function(){var s=document.createElement('script');s.src='https://telegram.org/js/telegram-web-app.js';s.async=true;document.head.appendChild(s);})();
-            `,
-          }}
-        />
+        <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
       </head>
       <body>
         <Providers>{children}</Providers>
