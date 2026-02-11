@@ -64,6 +64,9 @@ export const translations = {
   engagement: { ru: 'Вовлеченность (ERR)', en: 'Engagement (ERR)' },
   viewsPerSubscribers: { ru: 'просмотры / подписчики', en: 'views / subscribers' },
   placeAd: { ru: 'Разместить рекламу · Купить за', en: 'Place ad · Buy for' },
+  channelManagement: { ru: 'Управление каналом', en: 'Channel management' },
+  incomingOrders: { ru: 'Входящие заказы', en: 'Incoming orders' },
+  noIncomingOrders: { ru: 'Нет входящих заказов', en: 'No incoming orders' },
 
   // Campaigns
   noCampaigns: { ru: 'Нет кампаний', en: 'No campaigns' },

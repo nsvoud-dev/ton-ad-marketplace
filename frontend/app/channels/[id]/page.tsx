@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Skeleton } from '../../components/ui/Skeleton';
+import { IncomingOrders } from '../../components/IncomingOrders';
 import { formatPriceInTon } from '../../../lib/ton-utils';
 import { useTranslation } from '../../../lib/useTranslation';
 
@@ -11,6 +12,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 export default function ChannelPage({ params }: { params: { id: string } }) {
   const { t } = useTranslation();
   const [channel, setChannel] = useState<Record<string, unknown> | null>(null);
+  const [user, setUser] = useState<Record<string, unknown> | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncLoading, setSyncLoading] = useState(false);
 
@@ -36,6 +38,20 @@ export default function ChannelPage({ params }: { params: { id: string } }) {
     }
     fetchChannel()?.finally(() => setLoading(false));
   }, [fetchChannel]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token && !user) {
+      fetch(`${API_URL}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((u) => u && setUser(u))
+        .catch(() => setUser(null));
+    }
+  }, [user]);
+
+  const isOwner = user != null && channel != null && String(user.id) === String(channel.ownerId);
 
   const handleSyncStats = async () => {
     const token = localStorage.getItem('token');
@@ -477,39 +493,57 @@ export default function ChannelPage({ params }: { params: { id: string } }) {
           </section>
         );
       })()}
-      <div
-        style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          padding: 16,
-          background: 'linear-gradient(to top, var(--tg-theme-bg-color) 70%, transparent)',
-          display: 'flex',
-          justifyContent: 'center',
-          zIndex: 10,
-        }}
-      >
-        <a
-          href={`/campaigns?channel=${params.id}`}
+      {isOwner ? (
+        <section style={{ marginTop: 24, marginBottom: 80 }}>
+          <h3 style={{ marginBottom: 12, fontSize: 16 }}>{t('channelManagement')}</h3>
+          <div
+            style={{
+              padding: 20,
+              borderRadius: 8,
+              background: 'var(--tg-theme-secondary-bg-color)',
+            }}
+          >
+            <h4 style={{ marginTop: 0, marginBottom: 12, fontSize: 14, color: 'var(--tg-theme-hint-color)' }}>
+              {t('incomingOrders')}
+            </h4>
+            <IncomingOrders channelId={params.id} />
+          </div>
+        </section>
+      ) : (
+        <div
           style={{
-            display: 'block',
-            width: '100%',
-            maxWidth: 448,
-            padding: '16px 24px',
-            background: 'linear-gradient(135deg, #2481cc 0%, #6366f1 100%)',
-            color: '#fff',
-            textAlign: 'center',
-            fontWeight: 600,
-            fontSize: 16,
-            borderRadius: 12,
-            textDecoration: 'none',
-            boxShadow: '0 4px 14px rgba(36, 129, 204, 0.4)',
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            padding: 16,
+            background: 'linear-gradient(to top, var(--tg-theme-bg-color) 70%, transparent)',
+            display: 'flex',
+            justifyContent: 'center',
+            zIndex: 10,
           }}
         >
-          {t('placeAd')} {formatPriceInTon(String(channel.pricePerPostNano ?? 0))} TON
-        </a>
-      </div>
+          <a
+            href={`/campaigns?channel=${params.id}`}
+            style={{
+              display: 'block',
+              width: '100%',
+              maxWidth: 448,
+              padding: '16px 24px',
+              background: 'linear-gradient(135deg, #2481cc 0%, #6366f1 100%)',
+              color: '#fff',
+              textAlign: 'center',
+              fontWeight: 600,
+              fontSize: 16,
+              borderRadius: 12,
+              textDecoration: 'none',
+              boxShadow: '0 4px 14px rgba(36, 129, 204, 0.4)',
+            }}
+          >
+            {t('placeAd')} {formatPriceInTon(String(channel.pricePerPostNano ?? 0))} TON
+          </a>
+        </div>
+      )}
     </main>
   );
 }
