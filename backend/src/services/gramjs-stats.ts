@@ -45,7 +45,7 @@ export async function initGramJsClient(): Promise<InstanceType<typeof TelegramCl
   if (client) return client;
 
   const session = new StringSession(sessionString);
-  client = new TelegramClient(session, apiId, apiHash, {
+  client = new TelegramClient(session as any, apiId, apiHash, {
     connectionRetries: 3,
     useWSS: false,
   });

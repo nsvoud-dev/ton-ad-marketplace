@@ -31,7 +31,7 @@ async function bootstrap() {
       reply.status(401).send({ error: 'Unauthorized' });
       throw new Error('Unauthorized');
     }
-  });
+  } as any);
 
   await app.register(authRoutes, { prefix: '/api/auth' });
   await app.register(channelsRoutes, { prefix: '/api/channels' });

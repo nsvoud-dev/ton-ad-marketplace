@@ -25,7 +25,7 @@ export async function generateEscrowAddressForDeal(dealId: string): Promise<stri
   }
 
   try {
-    const seed = await mnemonicToSeed(mnemonic.trim().split(/\s+/));
+    const seed = await mnemonicToSeed(mnemonic.trim().split(/\s+/), '');
     const dealSeed = createHash('sha256')
       .update(seed)
       .update(Buffer.from(dealId, 'utf8'))
