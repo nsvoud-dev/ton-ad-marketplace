@@ -17,10 +17,11 @@
     "@fastify/jwt": "^8.0.1",
     "@prisma/client": "^5.22.0",
     "@ton/crypto": "^3.2.0",
-    "fastify": "^4.28.1",
-    "tweetnacl": "^1.0.3",
-    "telegram": "^2.26.22",
     "@ton/ton": "^15.1.0",
+    "dotenv": "^17.2.4",
+    "fastify": "^4.28.1",
+    "telegram": "^2.26.22",
+    "tweetnacl": "^1.0.3",
     "zod": "^3.23.8"
   },
   "devDependencies": {

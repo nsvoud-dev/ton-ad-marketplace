@@ -30,6 +30,7 @@ export function startPostVerificationWorker() {
     });
 
     for (const deal of deals) {
+      if (!deal.channel.telegramId) continue;
       const chatId = deal.channel.telegramId.toString();
       const messageId = Number(deal.publishedPostMessageId);
 

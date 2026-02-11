@@ -3,10 +3,11 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { canUserManageChannel } from '../lib/channel-admin.js';
 import { syncChannelStats } from '../services/channel-stats-sync.js';
+import { sendMessage } from '../lib/telegram-api.js';
 import { ChannelAdminRole } from '@prisma/client';
 
-const createChannelSchema = z.object({
-  telegramId: z.number().or(z.string().transform(Number)),
+const createChannelBaseSchema = z.object({
+  telegramId: z.union([z.number(), z.string(), z.null()]).optional(),
   username: z.string().optional(),
   title: z.string().optional(),
   description: z.string().optional(),
@@ -19,7 +20,17 @@ const createChannelSchema = z.object({
   isVerified: z.boolean().default(false),
 });
 
-const updateChannelSchema = createChannelSchema.partial();
+const createChannelSchema = createChannelBaseSchema.refine(
+  (data) => {
+    const v = data.telegramId;
+    if (v == null || v === '') return false;
+    if (typeof v === 'string' && !v.trim()) return false;
+    return true;
+  },
+  { message: 'Введите ID канала', path: ['telegramId'] }
+);
+
+const updateChannelSchema = createChannelBaseSchema.partial();
 
 const addAdminSchema = z.object({
   userId: z.string().min(1),
@@ -43,6 +54,7 @@ export async function channelsRoutes(app: FastifyInstance) {
     return reply.send(
       channels.map((c) => ({
         ...c,
+        telegramId: c.telegramId?.toString() ?? null,
         pricePerPostNano: c.pricePerPostNano.toString(),
       }))
     );
@@ -54,6 +66,7 @@ export async function channelsRoutes(app: FastifyInstance) {
       where: { isVerified: true },
       select: {
         id: true,
+        telegramId: true,
         username: true,
         title: true,
         subscribers: true,
@@ -69,6 +82,7 @@ export async function channelsRoutes(app: FastifyInstance) {
     return reply.send(
       channels.map((c) => ({
         ...c,
+        telegramId: c.telegramId?.toString() ?? null,
         pricePerPostNano: c.pricePerPostNano.toString(),
       }))
     );
@@ -78,12 +92,30 @@ export async function channelsRoutes(app: FastifyInstance) {
     const payload = (request as { user: { sub: string } }).user;
     const parsed = createChannelSchema.safeParse(request.body);
     if (!parsed.success) {
+      console.log('!!! Ошибка валидации:', parsed.error.format());
       return reply.status(400).send({ error: parsed.error.flatten() });
     }
-    const data = { ...parsed.data, telegramId: BigInt(parsed.data.telegramId), ownerId: payload.sub };
+    const raw = parsed.data.telegramId!;
+    const isNumeric = typeof raw === 'number' || /^-?\d+$/.test(String(raw));
+    const telegramId = isNumeric ? BigInt(raw) : null;
+    const username =
+      !isNumeric && typeof raw === 'string'
+        ? String(raw).replace(/^@/, '')
+        : parsed.data.username ?? undefined;
     const channel = await prisma.channel.create({
       data: {
-        ...data,
+        telegramId,
+        username,
+        title: parsed.data.title ?? null,
+        description: parsed.data.description ?? null,
+        subscribers: parsed.data.subscribers,
+        views: parsed.data.views,
+        reach: parsed.data.reach,
+        language: parsed.data.language ?? null,
+        premiumStats: parsed.data.premiumStats ? (parsed.data.premiumStats as object) : undefined,
+        pricePerPostNano: parsed.data.pricePerPostNano ?? 0n,
+        isVerified: parsed.data.isVerified,
+        ownerId: payload.sub,
         admins: {
           create: { userId: payload.sub, role: ChannelAdminRole.Owner },
         },
@@ -94,6 +126,8 @@ export async function channelsRoutes(app: FastifyInstance) {
     });
     return reply.status(201).send({
       ...channel,
+      // Если ID еще нет (ждем синхронизации), отправляем null, иначе — строку
+      telegramId: channel.telegramId?.toString() ?? null,
       pricePerPostNano: channel.pricePerPostNano.toString(),
     });
   });
@@ -105,13 +139,56 @@ export async function channelsRoutes(app: FastifyInstance) {
     if (!canManage) return reply.status(404).send({ error: 'Channel not found' });
     const channel = await prisma.channel.findUnique({
       where: { id },
-      include: { admins: { include: { user: { select: { id: true, username: true, firstName: true } } } } },
+      include: {
+        admins: { include: { user: { select: { id: true, username: true, firstName: true } } } },
+        owner: { select: { walletAddress: true } },
+      },
     });
     if (!channel) return reply.status(404).send({ error: 'Channel not found' });
     return reply.send({
       ...channel,
+      telegramId: channel.telegramId?.toString() ?? null,
       pricePerPostNano: channel.pricePerPostNano.toString(),
+      ownerWallet: channel.owner?.walletAddress ?? null,
     });
+  });
+
+  app.get('/:id/order-info', { preHandler: auth }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    const { id } = request.params;
+    const channel = await prisma.channel.findUnique({
+      where: { id },
+      include: { owner: { select: { walletAddress: true, telegramId: true } } },
+    });
+    if (!channel) return reply.status(404).send({ error: 'Channel not found' });
+    return reply.send({
+      id: channel.id,
+      title: channel.title,
+      username: channel.username,
+      pricePerPostNano: channel.pricePerPostNano.toString(),
+      ownerWallet: channel.owner?.walletAddress ?? null,
+    });
+  });
+
+  app.post('/:id/notify-interest', { preHandler: auth }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+    const { id } = request.params;
+    const channel = await prisma.channel.findUnique({
+      where: { id },
+      include: { owner: { select: { telegramId: true } } },
+    });
+    if (!channel) return reply.status(404).send({ error: 'Channel not found' });
+    if (!channel.owner?.telegramId) return reply.status(200).send({ ok: true });
+    const chatId = channel.owner.telegramId.toString();
+    console.log('Attempting to send message to chatId:', chatId);
+    try {
+      const channelName = (channel.title ?? channel.username ?? channel.id).replace(/[<>&]/g, '');
+      await sendMessage(
+        chatId,
+        `Кто-то хотел разместить рекламу в канале [${channelName}], но не смог — у вас не настроен кошелёк для приёма платежей. Добавьте wallet в профиле Mini App!`
+      );
+    } catch (e) {
+      console.error('Notify-interest failed. Telegram API error:', e);
+    }
+    return reply.send({ ok: true });
   });
 
   app.patch('/:id', { preHandler: auth }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
@@ -124,10 +201,18 @@ export async function channelsRoutes(app: FastifyInstance) {
     if (!channel) return reply.status(404).send({ error: 'Channel not found' });
 
     const update: Record<string, unknown> = { ...parsed.data };
-    if (update.telegramId != null) update.telegramId = BigInt(update.telegramId as number);
+    if (update.telegramId != null) {
+      const raw = update.telegramId as number | string;
+      const isNumeric = typeof raw === 'number' || /^-?\d+$/.test(String(raw));
+      (update as { telegramId?: bigint | null }).telegramId = isNumeric ? BigInt(raw) : null;
+      if (!isNumeric && typeof raw === 'string') {
+        update.username = String(raw).replace(/^@/, '');
+      }
+    }
     const updated = await prisma.channel.update({ where: { id }, data: update });
     return reply.send({
       ...updated,
+      telegramId: updated.telegramId?.toString() ?? null,
       pricePerPostNano: updated.pricePerPostNano.toString(),
     });
   });

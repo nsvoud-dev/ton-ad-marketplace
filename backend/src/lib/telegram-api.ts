@@ -50,6 +50,35 @@ export async function verifyUserIsChannelAdmin(chatId: string | number, telegram
  * Использует editMessageReplyMarkup с пустой разметкой — работает для любого типа сообщения.
  * Если сообщение удалено — API вернёт ошибку.
  */
+/**
+ * Отправляет сообщение пользователю в Telegram.
+ */
+export async function sendMessage(chatId: string | number, text: string): Promise<boolean> {
+  if (!BOT_TOKEN) return false;
+  try {
+    const url = `${BASE}/sendMessage`;
+    const body = new URLSearchParams({
+      chat_id: String(chatId),
+      text,
+    });
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+    const data = (await res.json()) as { ok: boolean; description?: string; error_code?: number };
+    if (!data.ok) {
+      const err = new Error(`Telegram API: ${data.description ?? 'unknown'} (code: ${data.error_code ?? '?'})`);
+      console.error('sendMessage Telegram API error:', err.message);
+      throw err;
+    }
+    return true;
+  } catch (e) {
+    console.error('sendMessage failed:', e);
+    throw e;
+  }
+}
+
 export async function editMessageExists(chatId: string | number, messageId: number): Promise<boolean> {
   if (!BOT_TOKEN) return false;
   try {

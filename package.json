@@ -10,9 +10,9 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:bot\"",
-    "dev:backend": "npm run dev -w backend",
-    "dev:frontend": "npm run dev -w frontend",
-    "dev:bot": "npm run dev -w bot",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:bot": "npm run dev --prefix bot",
     "build": "npm run build -w backend && npm run build -w frontend && npm run build -w bot",
     "db:generate": "npm run db:generate -w backend",
     "db:migrate": "npm run db:migrate -w backend",
@@ -23,5 +23,8 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "@next/swc-win32-x64-msvc": "^16.1.6"
   }
 }

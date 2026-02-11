@@ -56,7 +56,7 @@ export async function dealsRoutes(app: FastifyInstance) {
       where: { id: channel.ownerId },
       select: { telegramId: true },
     });
-    if (owner?.telegramId) {
+    if (owner?.telegramId && channel.telegramId) {
       const isAdmin = await verifyUserIsChannelAdmin(channel.telegramId.toString(), Number(owner.telegramId));
       if (!isAdmin) {
         return reply.status(400).send({
@@ -151,7 +151,7 @@ export async function dealsRoutes(app: FastifyInstance) {
     if (!canManage) return reply.status(403).send({ error: 'Not authorized to manage this channel' });
 
     const telegramId = payload.telegramId;
-    if (telegramId) {
+    if (telegramId && deal.channel.telegramId) {
       const isAdmin = await verifyUserIsChannelAdmin(deal.channel.telegramId.toString(), telegramId);
       if (!isAdmin) {
         return reply.status(403).send({
@@ -239,7 +239,7 @@ export async function dealsRoutes(app: FastifyInstance) {
       return reply.status(403).send({ error: 'Not authorized' });
     }
 
-    if (canManageChannel && payload.telegramId) {
+    if (canManageChannel && payload.telegramId && deal.channel.telegramId) {
       const isAdmin = await verifyUserIsChannelAdmin(deal.channel.telegramId.toString(), payload.telegramId);
       if (!isAdmin) {
         return reply.status(403).send({

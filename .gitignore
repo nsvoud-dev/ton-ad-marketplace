@@ -1,15 +1,13 @@
-# Dependencies
+# Dependencies (all folders)
 node_modules/
-.pnp
-.pnp.js
 
 # Build
+.next/
 dist/
 build/
-.next/
 out/
 
-# Env
+# Environment
 .env
 .env.local
 .env.*.local

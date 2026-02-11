@@ -7,6 +7,11 @@ const authBodySchema = z.object({
   initData: z.string().min(1, 'initData is required'),
 });
 
+const updateMeSchema = z.object({
+  role: z.enum(['Owner', 'Advertiser', 'Publisher']).optional(),
+  walletAddress: z.string().optional(),
+});
+
 export async function authRoutes(app: FastifyInstance) {
   app.post('/verify', async (request: FastifyRequest, reply: FastifyReply) => {
     const parsed = authBodySchema.safeParse((request.body as object) ?? {});
@@ -72,6 +77,26 @@ export async function authRoutes(app: FastifyInstance) {
     const payload = (request as { user: { sub: string } }).user;
     const user = await prisma.user.findUnique({ where: { id: payload.sub } });
     if (!user) return reply.status(404).send({ error: 'User not found' });
+    return reply.send({
+      id: user.id,
+      telegramId: user.telegramId.toString(),
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      walletAddress: user.walletAddress,
+      balanceNano: user.balanceNano.toString(),
+    });
+  });
+
+  app.patch('/me', { preHandler: [app.authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    const parsed = updateMeSchema.safeParse(request.body);
+    if (!parsed.success) return reply.status(400).send({ error: parsed.error.flatten() });
+    const payload = (request as { user: { sub: string } }).user;
+    const user = await prisma.user.update({
+      where: { id: payload.sub },
+      data: parsed.data as { role?: 'Owner' | 'Advertiser' | 'Publisher'; walletAddress?: string },
+    });
     return reply.send({
       id: user.id,
       telegramId: user.telegramId.toString(),

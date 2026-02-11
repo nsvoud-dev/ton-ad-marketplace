@@ -1,10 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { formatPriceInTon } from '../../lib/ton-utils';
+import { useTranslation } from '../../lib/useTranslation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export default function ChannelsPage() {
+  const { t } = useTranslation();
   const [channels, setChannels] = useState<Array<Record<string, unknown>>>([]);
 
   useEffect(() => {
@@ -23,17 +27,43 @@ export default function ChannelsPage() {
 
   return (
     <main style={{ padding: 16, maxWidth: 480, margin: '0 auto' }}>
-      <h1>Мои каналы</h1>
-      <a href="/" style={{ display: 'inline-block', marginBottom: 16, color: 'var(--tg-theme-link-color)' }}>← Назад</a>
+      <h1>{t('myChannels')}</h1>
+      <a href="/" style={{ display: 'inline-block', marginBottom: 16, color: 'var(--tg-theme-link-color)' }}>{t('back')}</a>
+      <a
+        href="/channels/add"
+        style={{
+          display: 'inline-block',
+          marginBottom: 16,
+          padding: '12px 20px',
+          background: 'var(--tg-theme-button-color)',
+          color: 'var(--tg-theme-button-text-color)',
+          borderRadius: 8,
+          textDecoration: 'none',
+        }}
+      >
+        {t('addChannel')}
+      </a>
       {channels.length === 0 ? (
-        <p style={{ color: 'var(--tg-theme-hint-color)' }}>Нет каналов</p>
+        <p style={{ color: 'var(--tg-theme-hint-color)' }}>{t('noChannels')}</p>
       ) : (
         <ul style={{ listStyle: 'none' }}>
           {channels.map((c) => (
-            <li key={String(c.id)} style={{ padding: 12, marginBottom: 8, background: 'var(--tg-theme-secondary-bg-color)', borderRadius: 8 }}>
-              <strong>{String(c.title || c.username || c.id)}</strong>
-              <br />
-              <span style={{ color: 'var(--tg-theme-hint-color)' }}>{String(c.pricePerPostNano)} nano TON/post</span>
+            <li key={String(c.id)} style={{ marginBottom: 8 }}>
+              <Link
+                href={`/channels/${c.id}`}
+                style={{
+                  display: 'block',
+                  padding: 12,
+                  background: 'var(--tg-theme-secondary-bg-color)',
+                  borderRadius: 8,
+                  textDecoration: 'none',
+                  color: 'inherit',
+                }}
+              >
+                <strong>{String(c.title || c.username || c.id)}</strong>
+                <br />
+                <span style={{ color: 'var(--tg-theme-hint-color)' }}>{formatPriceInTon(String(c.pricePerPostNano ?? 0))} {t('tonPerPost')}</span>
+              </Link>
             </li>
           ))}
         </ul>

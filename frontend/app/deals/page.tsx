@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useTranslation } from '../../lib/useTranslation';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export default function DealsPage() {
+  const { t } = useTranslation();
   const [deals, setDeals] = useState<Array<Record<string, unknown>>>([]);
 
   useEffect(() => {
@@ -25,10 +27,10 @@ export default function DealsPage() {
 
   return (
     <main style={{ padding: 16, maxWidth: 480, margin: '0 auto' }}>
-      <h1>Мои сделки</h1>
-      <a href="/" style={{ display: 'inline-block', marginBottom: 16, color: 'var(--tg-theme-link-color)' }}>← Назад</a>
+      <h1>{t('myDeals')}</h1>
+      <a href="/" style={{ display: 'inline-block', marginBottom: 16, color: 'var(--tg-theme-link-color)' }}>{t('back')}</a>
       {deals.length === 0 ? (
-        <p style={{ color: 'var(--tg-theme-hint-color)' }}>Нет сделок</p>
+        <p style={{ color: 'var(--tg-theme-hint-color)' }}>{t('noDeals')}</p>
       ) : (
         <ul style={{ listStyle: 'none' }}>
           {deals.map((d) => (

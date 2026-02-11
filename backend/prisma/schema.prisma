@@ -11,6 +11,7 @@ datasource db {
 enum UserRole {
   Owner
   Advertiser
+  Publisher
 }
 
 enum DealStatus {
@@ -60,7 +61,7 @@ model Channel {
   id              String   @id @default(cuid())
   ownerId         String
   owner           User     @relation("ChannelOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  telegramId      BigInt   @unique // ID канала в Telegram (отрицательный)
+  telegramId      BigInt?  @unique // ID канала (или null до резолва юзернейма через GramJS)
   username        String?  @unique
   title           String?
   description     String?
@@ -70,6 +71,7 @@ model Channel {
   language        String?
   languageCharts  Json?    // Распределение языков [{lang, percentage}]
   premiumStats    Json?    // Premium: подписчики, доля и т.д.
+  extendedStats   Json?    // notificationsEnabled, viewSources, sharesPerPost
   pricePerPostNano BigInt  @default(0) // Цена за пост в nanotons
   isVerified      Boolean  @default(false)
   createdAt       DateTime @default(now())
@@ -111,6 +113,7 @@ model Campaign {
   briefDeadline     DateTime?
   briefBudgetNano   BigInt?
   briefNotes        String?
+  externalId        String?    // Хеш транзакции TON
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
