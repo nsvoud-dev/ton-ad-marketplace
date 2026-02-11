@@ -15,6 +15,10 @@ import { campaignsRoutes } from './routes/campaigns.js';
 import { dealsRoutes } from './routes/deals.js';
 import { escrowRoutes } from './routes/escrow.js';
 
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
+
 const app = Fastify({ logger: true });
 
 async function bootstrap() {
