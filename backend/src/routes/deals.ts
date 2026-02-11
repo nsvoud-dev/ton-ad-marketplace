@@ -91,17 +91,22 @@ export async function dealsRoutes(app: FastifyInstance) {
     });
   });
 
-  // Получить свои сделки (advertiser, owner или PR Manager канала)
-  app.get('/', { preHandler: auth }, async (request: FastifyRequest, reply: FastifyReply) => {
+  // Получить свои сделки (advertiser, owner или PR Manager канала). Опционально фильтр по channelId.
+  app.get('/', { preHandler: auth }, async (request: FastifyRequest<{ Querystring: { channelId?: string } }>, reply: FastifyReply) => {
     const payload = (request as { user: { sub: string } }).user;
+    const { channelId } = request.query;
+    const baseWhere = {
+      OR: [
+        { advertiserId: payload.sub },
+        { ownerId: payload.sub },
+        { channel: { admins: { some: { userId: payload.sub } } } },
+      ],
+    };
+    const where = channelId
+      ? { AND: [baseWhere, { channelId }] }
+      : baseWhere;
     const deals = await prisma.deal.findMany({
-      where: {
-        OR: [
-          { advertiserId: payload.sub },
-          { ownerId: payload.sub },
-          { channel: { admins: { some: { userId: payload.sub } } } },
-        ],
-      },
+      where,
       include: { campaign: true, channel: true },
     });
     return reply.send(

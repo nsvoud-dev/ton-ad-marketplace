@@ -14,11 +14,10 @@ export function IncomingOrders({ channelId }: { channelId: string }) {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) return;
-    fetch(`${API_URL}/api/deals`, {
+    fetch(`${API_URL}/api/deals?channelId=${channelId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => (r.ok ? r.json() : []))
-      .then((list) => list.filter((d: Record<string, unknown>) => d.channelId === channelId))
       .then(setDeals)
       .catch(() => setDeals([]));
   }, [channelId]);
