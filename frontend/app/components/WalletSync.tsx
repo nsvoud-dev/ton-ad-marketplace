@@ -51,7 +51,6 @@ export function WalletSync() {
       })
       .catch((err) => {
         if (err?.name === 'AbortError') return;
-        console.error('Sync Error:', err);
         toast.error(`Sync failed: ${err?.message ?? String(err)}`);
       });
 

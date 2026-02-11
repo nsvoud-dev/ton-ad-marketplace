@@ -91,10 +91,7 @@ export async function channelsRoutes(app: FastifyInstance) {
   app.post('/', { preHandler: auth }, async (request: FastifyRequest, reply: FastifyReply) => {
     const payload = (request as { user: { sub: string } }).user;
     const parsed = createChannelSchema.safeParse(request.body);
-    if (!parsed.success) {
-      console.log('!!! Ошибка валидации:', parsed.error.format());
-      return reply.status(400).send({ error: parsed.error.flatten() });
-    }
+    if (!parsed.success) return reply.status(400).send({ error: parsed.error.flatten() });
     const raw = parsed.data.telegramId!;
     const isNumeric = typeof raw === 'number' || /^-?\d+$/.test(String(raw));
     const telegramId = isNumeric ? BigInt(raw) : null;
@@ -178,7 +175,6 @@ export async function channelsRoutes(app: FastifyInstance) {
     if (!channel) return reply.status(404).send({ error: 'Channel not found' });
     if (!channel.owner?.telegramId) return reply.status(200).send({ ok: true });
     const chatId = channel.owner.telegramId.toString();
-    console.log('Attempting to send message to chatId:', chatId);
     try {
       const channelName = (channel.title ?? channel.username ?? channel.id).replace(/[<>&]/g, '');
       await sendMessage(

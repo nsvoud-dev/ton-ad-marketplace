@@ -13,6 +13,7 @@ export default function ChannelPage({ params }: { params: { id: string } }) {
   const { t } = useTranslation();
   const [channel, setChannel] = useState<Record<string, unknown> | null>(null);
   const [user, setUser] = useState<Record<string, unknown> | null>(null);
+  const [userLoaded, setUserLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [syncLoading, setSyncLoading] = useState(false);
 
@@ -41,17 +42,25 @@ export default function ChannelPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token && !user) {
-      fetch(`${API_URL}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((u) => u && setUser(u))
-        .catch(() => setUser(null));
+    if (!token) {
+      setUserLoaded(true);
+      return;
     }
-  }, [user]);
+    fetch(`${API_URL}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((u) => {
+        setUser(u ?? null);
+        setUserLoaded(true);
+      })
+      .catch(() => {
+        setUser(null);
+        setUserLoaded(true);
+      });
+  }, []);
 
-  const isOwner = user != null && channel != null && String(user.id) === String(channel.ownerId);
+  const isOwner = userLoaded && Boolean(user?.id) && Boolean(channel?.ownerId) && String(user!.id) === String(channel!.ownerId);
 
   const handleSyncStats = async () => {
     const token = localStorage.getItem('token');
@@ -493,7 +502,12 @@ export default function ChannelPage({ params }: { params: { id: string } }) {
           </section>
         );
       })()}
-      {isOwner ? (
+      {!userLoaded ? (
+        <section style={{ marginTop: 24, marginBottom: 80 }}>
+          <Skeleton className="h-8 w-40 mb-4" />
+          <Skeleton className="h-32 w-full rounded-lg" />
+        </section>
+      ) : isOwner ? (
         <section style={{ marginTop: 24, marginBottom: 80 }}>
           <h3 style={{ marginBottom: 12, fontSize: 16 }}>{t('channelManagement')}</h3>
           <div

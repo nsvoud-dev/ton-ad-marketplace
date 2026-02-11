@@ -46,8 +46,7 @@ export default function Home() {
       } else {
         toast.error(t('loginErrorToast'));
       }
-    } catch (e) {
-      console.error(e);
+    } catch {
       toast.error(t('loginErrorToast'));
     }
   }, [initData, t]);

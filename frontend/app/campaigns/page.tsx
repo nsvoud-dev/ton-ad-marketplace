@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, Suspense } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { TonConnectButton, useTonAddress, useTonConnectUI } from '@tonconnect/ui-react';
 import { beginCell } from '@ton/ton';
@@ -203,12 +204,12 @@ function CampaignForm({ channelId }: { channelId: string }) {
 
   return (
     <main style={{ padding: 16, maxWidth: 480, margin: '0 auto' }}>
-      <a
+      <Link
         href={`/channels/${channelId}`}
         style={{ display: 'inline-block', marginBottom: 16, color: 'var(--tg-theme-link-color)' }}
       >
         {t('backToChannel')}
-      </a>
+      </Link>
       <div
         style={{
           padding: 20,
@@ -370,9 +371,9 @@ function CampaignsList() {
   return (
     <main style={{ padding: 16, maxWidth: 480, margin: '0 auto' }}>
       <h1>{t('myCampaigns')}</h1>
-      <a href="/" style={{ display: 'inline-block', marginBottom: 16, color: 'var(--tg-theme-link-color)' }}>
+      <Link href="/" style={{ display: 'inline-block', marginBottom: 16, color: 'var(--tg-theme-link-color)' }}>
         {t('back')}
-      </a>
+      </Link>
       {campaigns.length === 0 ? (
         <p style={{ color: 'var(--tg-theme-hint-color)' }}>{t('noCampaigns')}</p>
       ) : (

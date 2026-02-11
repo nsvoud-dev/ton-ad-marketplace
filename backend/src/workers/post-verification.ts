@@ -47,7 +47,6 @@ export function startPostVerificationWorker() {
               verificationNotes: 'Post was deleted from channel within 24h',
             },
           });
-          console.log(`[Worker] Deal ${deal.id} — post deleted, refund required`);
           continue;
         }
 
@@ -65,7 +64,6 @@ export function startPostVerificationWorker() {
                 verificationNotes: 'Post was edited after publication — content hash mismatch',
               },
             });
-            console.log(`[Worker] Deal ${deal.id} — post was edited, refund required`);
             continue;
           }
         }
@@ -78,7 +76,6 @@ export function startPostVerificationWorker() {
             verificationNotes: 'Post verified after 24h (exists and content unchanged)',
           },
         });
-        console.log(`[Worker] Deal ${deal.id} verified — post intact`);
       } catch (e) {
         console.error(`[Worker] Deal ${deal.id} verification error:`, e);
       }
@@ -87,5 +84,4 @@ export function startPostVerificationWorker() {
 
   run();
   setInterval(run, INTERVAL_MS);
-  console.log('[Worker] Post verification worker started (interval 10 min)');
 }

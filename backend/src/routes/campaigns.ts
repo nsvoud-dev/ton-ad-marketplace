@@ -78,7 +78,6 @@ export async function campaignsRoutes(app: FastifyInstance) {
     const owner = channel.owner;
     if (owner?.telegramId) {
       const chatId = owner.telegramId.toString();
-      console.log('Attempting to send message to chatId:', chatId);
       try {
         const channelName = (channel.title ?? channel.username ?? channel.id).replace(/[<>&]/g, '');
         await sendMessage(

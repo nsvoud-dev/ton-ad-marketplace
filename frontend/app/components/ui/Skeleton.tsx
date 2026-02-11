@@ -9,7 +9,8 @@ type SkeletonProps = {
 export function Skeleton({ className = '' }: SkeletonProps) {
   return (
     <div
-      className={`animate-pulse rounded bg-gray-200 dark:bg-gray-700 ${className}`.trim()}
+      className={`animate-pulse rounded ${className}`.trim()}
+      style={{ background: 'var(--tg-theme-secondary-bg-color, #e5e7eb)' }}
       role="status"
       aria-label={t('loadingAria')}
     />

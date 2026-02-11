@@ -67,6 +67,10 @@ export const translations = {
   channelManagement: { ru: 'Управление каналом', en: 'Channel management' },
   incomingOrders: { ru: 'Входящие заказы', en: 'Incoming orders' },
   noIncomingOrders: { ru: 'Нет входящих заказов', en: 'No incoming orders' },
+  emptyOrdersHint: {
+    ru: 'Здесь будут ваши заказы. Расскажите о канале, чтобы привлечь рекламодателей!',
+    en: 'Your orders will appear here. Promote your channel to attract advertisers!',
+  },
 
   // Campaigns
   noCampaigns: { ru: 'Нет кампаний', en: 'No campaigns' },

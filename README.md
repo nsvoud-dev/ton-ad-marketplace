@@ -1,214 +1,127 @@
-# Ton Ad Marketplace
+# TON Ad Marketplace
 
-MVP маркетплейса рекламы для Telegram-каналов с escrow на TON.
+A decentralized advertising marketplace for Telegram channels powered by TON blockchain. Connect advertisers with channel owners, pay in TON, and automate post publication with built-in escrow protection.
 
-## Архитектура
+## Overview
+
+TON Ad Marketplace revolutionizes how advertisers discover channels and how channel owners monetize their audience. Payments flow through TON wallets with unique escrow addresses per deal, ensuring security for both parties. Integrated with Telegram Mini Apps for a seamless in-app experience.
+
+**Flow:** Advertiser pays → Escrow Wallet → Owner notified → Draft approved → Post published → Verification → Payout
+
+## Tech Stack
+
+| Layer    | Technologies                          |
+| -------- | ------------------------------------- |
+| Frontend | Next.js 16, React, TON Connect UI      |
+| Backend  | Fastify, Prisma ORM                   |
+| Database | PostgreSQL                            |
+| Auth     | Telegram WebApp initData, JWT         |
+| Payments | TON, TonConnect, deterministic escrow |
+| Bot      | Telegraf (notifications, messaging)   |
+
+## How It Works
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           TON Ad Marketplace                                 │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│  ┌──────────────┐     ┌──────────────┐     ┌──────────────────────────────┐ │
-│  │   Telegram   │     │   Telegram   │     │         Backend              │ │
-│  │   Mini App   │────▶│     Bot      │────▶│   Fastify + Prisma           │ │
-│  │  (Next.js)   │     │  (Telegraf)  │     │   PostgreSQL                 │ │
-│  └──────┬───────┘     └──────────────┘     └──────────────┬───────────────┘ │
-│         │                                                  │                 │
-│         │ TonConnect UI                                     │ Escrow          │
-│         ▼                                                  ▼                 │
-│  ┌──────────────┐                                 ┌──────────────────────┐  │
-│  │  TON Wallet  │────────────────────────────────▶│  Unique Escrow Addr  │  │
-│  │  (TonConnect)│         TON transfer            │  per Deal            │  │
-│  └──────────────┘                                 └──────────────────────┘  │
-│                                                                              │
-└─────────────────────────────────────────────────────────────────────────────┘
+Advertiser                    Marketplace                    Channel Owner
+    │                              │                                │
+    │  1. Submit campaign          │                                │
+    │ ──────────────────────────► │                                │
+    │                              │  2. Owner accepts/rejects      │
+    │                              │ ◄─────────────────────────────│
+    │  3. Create deal, pay TON     │                                │
+    │ ──────────────────────────► │  (unique escrow per deal)      │
+    │                              │  4. Notify owner               │
+    │                              │ ──────────────────────────────►│
+    │                              │  5. Owner uploads draft        │
+    │                              │ ◄─────────────────────────────│
+    │  6. Approve draft            │                                │
+    │ ──────────────────────────► │                                │
+    │                              │  7. Post published to channel  │
+    │                              │ ──────────────────────────────►│
+    │                              │  8. Verify after 24h           │
+    │                              │  9. Payout to owner            │
 ```
 
-### Модули
+## Local Setup
 
-| Модуль | Описание |
-|--------|----------|
-| **Frontend** | Next.js + TonConnect UI. Mini App для рекламодателей и владельцев каналов. |
-| **Backend** | Fastify, Prisma, PostgreSQL. API для auth, channels, campaigns, deals, escrow. |
-| **Bot** | Telegraf. Messaging, уведомления. Коммуникация идёт через бота, не внутри Mini App. |
-
-### Approval Workflow
-
-1. **Advertiser** отправляет бриф (Campaign) → `POST /api/campaigns`
-2. **Owner** принимает или отклоняет → `POST /api/campaigns/:id/accept` | `reject`
-3. **Advertiser** создаёт сделку → `POST /api/deals`
-4. **Advertiser** вносит TON на escrow → `GET /api/escrow/deal/:dealId`, затем `POST .../confirm-funded`
-5. **Owner** загружает черновик → `POST /api/deals/:id/draft`
-6. **Advertiser** одобряет или отклоняет черновик → `POST /api/deals/:id/draft/review`
-7. Планирование публикации → `POST /api/deals/:id/schedule`
-8. Бот публикует пост (автоматизация) и проверяет наличие в канале
-9. Выплата Owner или Refund Advertiser
-
-### Escrow (TON)
-
-- **Уникальный адрес на сделку**: из мнемоники генерируется детерминированный кошелёк для каждой Deal. Средства изолированы.
-
-### Схема БД (Prisma)
-
-- **User**: `telegramId`, `role` (Owner|Advertiser), `balanceNano`, `walletAddress`
-- **Channel**: `telegramId`, `subscribers`, `views`, `reach`, `languageCharts`, `premiumStats`, `pricePerPostNano`, `isVerified`
-- **Campaign**: бриф (title, description, targetAudience, links, budget)
-- **Deal**: `status`, `escrowAddress` (уникальный), `draftContentHash` (SHA-256 для проверки целостности), черновик, метаданные поста
-
----
-
-## Требования
+### Prerequisites
 
 - Node.js >= 18
 - PostgreSQL
-- Telegram Bot Token (BotFather)
-- Telegram API ID / API Hash (для MTProto — статистика каналов)
-- TON Escrow Mnemonic (для уникальных адресов на сделку)
+- [Telegram Bot Token](https://t.me/BotFather)
+- [Telegram API credentials](https://my.telegram.org/apps) (for channel stats)
 
----
-
-## Установка и запуск
-
-### 1. Клонирование и зависимости
+### Installation
 
 ```bash
-git clone <repo>
+git clone <repository-url>
 cd TG_app
 npm install
 ```
 
-### 2. Переменные окружения
+### Environment
 
-Скопируйте `.env.example` в `.env` и заполните:
+Copy `.env.example` to `.env` and configure:
 
 ```bash
 cp .env.example .env
 ```
 
-Обязательно:
-- `DATABASE_URL` — строка подключения PostgreSQL
-- `TELEGRAM_BOT_TOKEN` — токен бота
-- `JWT_SECRET` — секрет для JWT
-- `TON_ESCROW_MNEMONIC` — мнемоника для генерации уникальных escrow-адресов
+Required variables:
 
-Для статистики каналов и проверки постов (GramJS/MTProto):
-- `TELEGRAM_API_ID` — получить на https://my.telegram.org/apps
-- `TELEGRAM_API_HASH` — получить там же
-- `TELEGRAM_MTProto_SESSION` — сессия после входа (см. раздел ниже)
+- `DATABASE_URL` — PostgreSQL connection string
+- `TELEGRAM_BOT_TOKEN` — Bot token from BotFather
+- `JWT_SECRET` — Secret for JWT signing
+- `TON_ESCROW_MNEMONIC` — Mnemonic for per-deal escrow addresses
 
-### 3. База данных
+Optional (channel stats via GramJS):
+
+- `TELEGRAM_API_ID`, `TELEGRAM_API_HASH`, `TELEGRAM_MTProto_SESSION`
+
+### Database
 
 ```bash
 npm run db:generate
 npm run db:push
-# или npm run db:migrate
 ```
 
-### 4. Запуск
+### Run
 
 ```bash
-# Все сервисы
+# All services (backend, frontend, bot)
 npm run dev
 
-# Отдельно
-npm run dev:backend   # :3001
-npm run dev:frontend  # :3000
+# Or separately
+npm run dev:backend   # http://localhost:3001
+npm run dev:frontend  # http://localhost:3000
 npm run dev:bot
 ```
 
----
+## Deployment
 
-## Деплой
+| Service   | Suggested platform      | Notes                                              |
+| --------- | ----------------------- | -------------------------------------------------- |
+| Backend   | Railway / Render / VPS  | Node.js, port 3001, `DATABASE_URL` required        |
+| Frontend  | Vercel / Netlify        | Set `NEXT_PUBLIC_API_URL`, manifest URL, TON network |
+| Database  | Railway Postgres / Supabase |                                                    |
+| Bot       | Railway / VPS           | `TELEGRAM_BOT_TOKEN`, `API_URL`                    |
 
-### Backend (Fastify)
+**Live Demo (placeholders):**
 
-- Рекомендуется: **Docker** или **Node.js** на VPS (PM2, systemd)
-- Порт: 3001 (или через reverse proxy)
-- База: PostgreSQL (managed или self-hosted)
+- App: `https://your-app.vercel.app` _(add your URL)_
+- API: `https://your-api.railway.app` _(add your URL)_
 
-### Frontend (Next.js)
+## Project Structure
 
-- Vercel, Netlify или любой хостинг с Node.js
-- Переменные: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_TON_CONNECT_MANIFEST_URL`, `NEXT_PUBLIC_TON_NETWORK`
-- `tonconnect-manifest.json` должен быть доступен по HTTPS
-
-### Bot (Telegraf)
-
-- Запуск на VPS с PM2/systemd
-- Переменные: `TELEGRAM_BOT_TOKEN`, `API_URL` (URL бэкенда для будущих webhook/уведомлений)
-
-### Docker (пример)
-
-```dockerfile
-# backend/Dockerfile
-FROM node:20-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --omit=dev
-COPY . .
-RUN npx prisma generate
-CMD ["node", "dist/index.js"]
+```
+TG_app/
+├── frontend/     # Next.js Mini App
+├── backend/      # Fastify API + Prisma
+├── bot/          # Telegraf bot
+├── scripts/      # GramJS session helper
+└── prisma/       # Schema & migrations
 ```
 
-### Настройка Mini App в Telegram
+## License
 
-1. Создайте бота через @BotFather
-2. В BotFather: `/newapp` или настройте Menu Button с URL вашего Mini App
-3. URL Mini App — HTTPS-адрес вашего Next.js приложения
-
-### Настройка MTProto (API ID / API Hash) для статистики
-
-Сбор language charts и Premium-статистики каналов требует MTProto (GramJS):
-
-1. Зайдите на https://my.telegram.org/apps
-2. Создайте приложение, получите **API ID** и **API Hash**
-3. Сгенерируйте сессию — используйте скрипт:
-
-```js
-// scripts/gramjs-session.js
-const { TelegramClient } = require('telegram');
-const { StringSession } = require('telegram/sessions');
-
-const apiId = parseInt(process.env.TELEGRAM_API_ID, 10);
-const apiHash = process.env.TELEGRAM_API_HASH;
-
-async function main() {
-  const client = new TelegramClient(new StringSession(''), apiId, apiHash, {});
-  await client.start({ phoneNumber: async () => prompt('Phone:'), password: async () => prompt('2FA:'), phoneCode: async () => prompt('Code:') });
-  console.log('Session:', client.session.save());
-  process.exit(0);
-}
-main();
-```
-
-4. Выполните: `TELEGRAM_API_ID=... TELEGRAM_API_HASH=... node scripts/gramjs-session.js` (из корня проекта)
-5. Скопируйте вывод в `TELEGRAM_MTProto_SESSION` в `.env`
-6. **Важно**: аккаунт должен быть добавлен админом в каналы, статистику которых нужно получать
-
----
-
-## API (кратко)
-
-| Метод | Путь | Описание |
-|-------|------|----------|
-| POST | `/api/auth/verify` | Вход по `initData` (Telegram WebApp) |
-| GET | `/api/auth/me` | Текущий пользователь |
-| GET/POST | `/api/channels` | Каналы владельца |
-| GET | `/api/channels/catalog` | Публичный каталог |
-| POST | `/api/channels/:id/sync-stats` | Синхронизация статистики (language charts, Premium) |
-| GET/POST | `/api/campaigns` | Кампании рекламодателя |
-| POST | `/api/campaigns/:id/accept` | Owner принимает кампанию |
-| POST | `/api/campaigns/:id/reject` | Owner отклоняет |
-| GET/POST | `/api/deals` | Сделки |
-| POST | `/api/deals/:id/draft` | Owner загружает черновик |
-| POST | `/api/deals/:id/draft/review` | Advertiser одобряет/отклоняет |
-| POST | `/api/deals/:id/schedule` | Планирование публикации |
-| GET | `/api/escrow/deal/:dealId` | Данные для перевода TON |
-| POST | `/api/escrow/deal/:dealId/confirm-funded` | Подтверждение внесения средств |
-
----
-
-## Лицензия
-
-MIT (готово к Open Source)
+MIT

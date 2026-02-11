@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { getErrorMessage } from '../../../lib/api-utils';
 import { useTranslation } from '../../../lib/useTranslation';
@@ -55,9 +56,9 @@ export default function AddChannelPage() {
   return (
     <main style={{ padding: 16, maxWidth: 480, margin: '0 auto' }}>
       <h1>{t('addChannel')}</h1>
-      <a href="/channels" style={{ display: 'inline-block', marginBottom: 16, color: 'var(--tg-theme-link-color)' }}>
+      <Link href="/channels" style={{ display: 'inline-block', marginBottom: 16, color: 'var(--tg-theme-link-color)' }}>
         {t('back')}
-      </a>
+      </Link>
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <label style={{ color: 'var(--tg-theme-text-color)' }}>
           {t('channelIdLabel')}
